@@ -165,7 +165,7 @@ def prepare_input_output_pairs(
 
 class Generator(nn.Module):
     """
-    Generator model for predicting H and S channels from 5-channel input:
+    Generator model for predicting A and B channels from 5-channel input:
     V channel, Sobel magnitude, Laplacian, and 2D spatial coordinates.
     """
     def __init__(self) -> None:
@@ -177,7 +177,7 @@ class Generator(nn.Module):
             nn.ReLU(),
             nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
-            nn.Conv2d(128, 2, kernel_size=3, stride=1, padding=1),  # Output: 2 channels (H and S)
+            nn.Conv2d(128, 2, kernel_size=3, stride=1, padding=1),  # Output: 2 channels (A and B)
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -186,8 +186,8 @@ class Generator(nn.Module):
 
 class Discriminator(nn.Module):
     """
-    Discriminator model for distinguishing real vs fake (H, S) patches.
-    Input: 2-channel image (H, S).
+    Discriminator model for distinguishing real vs fake (A, B) patches.
+    Input: 2-channel image (A, B).
     Output: Scalar score (higher = more real).
     """
     def __init__(self) -> None:
@@ -241,8 +241,8 @@ def train_step(
     discriminator: nn.Module,
     inputs: torch.Tensor,
     targets: torch.Tensor,
-    generator_optimizer: optim.Optimizer,
-    discriminator_optimizer: optim.Optimizer,
+    generator_optimiser: optim.Optimizer,
+    discriminator_optimiser: optim.Optimizer,
     device: torch.device
     ) -> tuple[float, float]:
     """
@@ -253,8 +253,8 @@ def train_step(
         discriminator (nn.Module): Discriminator network.
         inputs (Tensor): Input features (e.g. V, edge maps, coords).
         targets (Tensor): Ground truth H and S channels.
-        generator_optimizer (Optimizer): Optimizer for the generator.
-        discriminator_optimizer (Optimizer): Optimizer for the discriminator.
+        generator_optimiser (Optimiser): Optimiser for the generator.
+        discriminator_optimiser (Optimiser): Optimiser for the discriminator.
         device (torch.device): Device to run computations on.
 
     Returns:
@@ -281,18 +281,18 @@ def train_step(
     fake_loss = criterion(fake_preds, fake_labels)
     disc_loss = real_loss + fake_loss
 
-    discriminator_optimizer.zero_grad()
+    discriminator_optimiser.zero_grad()
     disc_loss.backward()
-    discriminator_optimizer.step()
+    discriminator_optimiser.step()
 
     # Train Generator to fool Discriminator
     gen_labels = torch.full((batch_size, 1), 1.0, device=device) + 0.05 * torch.rand((batch_size, 1), device=device)
     fake_preds = discriminator(fake_HS)
     gen_loss = criterion(fake_preds, gen_labels)
 
-    generator_optimizer.zero_grad()
+    generator_optimiser.zero_grad()
     gen_loss.backward()
-    generator_optimizer.step()
+    generator_optimiser.step()
 
     return disc_loss.item(), gen_loss.item()
 
@@ -303,8 +303,8 @@ def train_gan(
     discriminator: nn.Module,
     dataloader: DataLoader,
     epochs: int,
-    generator_optimizer: optim.Optimizer,
-    discriminator_optimizer: optim.Optimizer,
+    generator_optimiser: optim.Optimizer,
+    discriminator_optimiser: optim.Optimizer,
     device: torch.device
     ) -> None:
     """
@@ -315,8 +315,8 @@ def train_gan(
         discriminator (nn.Module): Discriminator model.
         dataloader (DataLoader): DataLoader yielding (input, target) pairs.
         epochs (int): Number of training epochs.
-        generator_optimizer (Optimizer): Optimizer for the generator.
-        discriminator_optimizer (Optimizer): Optimizer for the discriminator.
+        generator_optimiser (Optimiser): Optimiser for the generator.
+        discriminator_optimiser (Optimiser): Optimiser for the discriminator.
         device (torch.device): Device for training (CPU or CUDA).
     """
     for epoch in range(epochs):
@@ -330,8 +330,8 @@ def train_gan(
                 discriminator,
                 input_patches,
                 real_HS,
-                generator_optimizer,
-                discriminator_optimizer,
+                generator_optimiser,
+                discriminator_optimiser,
                 device
             )
 
@@ -344,55 +344,31 @@ def train_gan(
 img = cv2.imread("jcsmr.jpg")  # Remember OpenCV loads in BGR
 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # Convert to RGB if needed
 
-'''
-hsv_img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
-h, s, v = cv2.split(hsv_img)
-h_equalized = cv2.equalizeHist(h)
-v_equalized = cv2.equalizeHist(v)
-s_equalized = cv2.equalizeHist(s)
-hsv_img = cv2.merge([h, s_equalized, v_equalized])
-img = cv2.cvtColor(hsv_img, cv2.COLOR_HSV2RGB)
-'''
-
-
-patchesList, patchOrigins = extract_patches_with_augmentation(img, num_patches=1000, patch_size=(128, 128))
+patchesList, patchOrigins = extract_patches_with_augmentation(img, num_patches=5000, patch_size=(128, 128))
 input_data, output_data = prepare_input_output_pairs(patchesList, patchOrigins, patch_size=(128, 128))
 
 
 print("Input shape:", input_data.shape)
 print("Output shape:", output_data.shape)
 
-# Loss Functions
-criterion = nn.BCELoss()
-
-# Optimizers
+# Optimisers
 generator = Generator()
 discriminator = Discriminator()
 
-#generator_optimizer = optim.Adam(generator.parameters(), lr=0.0002, betas=(0.5, 0.999))
-#discriminator_optimizer = optim.Adam(discriminator.parameters(), lr=0.0002, betas=(0.5, 0.999))
+generator_optimiser = torch.optim.Adam(generator.parameters(), lr=1e-4, betas=(0.5, 0.999))
+discriminator_optimiser = torch.optim.Adam(discriminator.parameters(), lr=4e-4, betas=(0.5, 0.999))
 
-generator_optimizer = torch.optim.Adam(generator.parameters(), lr=1e-4, betas=(0.5, 0.999))
-discriminator_optimizer = torch.optim.Adam(discriminator.parameters(), lr=4e-4, betas=(0.5, 0.999))
-
-# Set up criterion
 criterion = nn.BCEWithLogitsLoss()
 
 input_data_tensor = torch.tensor(input_data, dtype=torch.float32).permute(0, 3, 1, 2)  # Convert to (batch, channels, height, width)
 output_data_tensor = torch.tensor(output_data, dtype=torch.float32).permute(0, 3, 1, 2)  # Convert to (batch, channels, height, width)
 
-print(f"Input data tensor shape: {input_data_tensor.shape}")
-print(f"Output data tensor shape: {output_data_tensor.shape}")
-
 # Create a dataset and dataloader
 dataset = TensorDataset(input_data_tensor, output_data_tensor)
 dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
-print(f"Dataset length: {len(dataset)}")
-
 # Set the device to either GPU or CPU
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(device)
 
 # Move models to the correct device
 generator = generator.to(device)
@@ -400,7 +376,7 @@ discriminator = discriminator.to(device)
 
 # Train the model
 epochs = 20
-model = train_gan(generator, discriminator, dataloader, epochs, generator_optimizer, discriminator_optimizer, device)
+model = train_gan(generator, discriminator, dataloader, epochs, generator_optimiser, discriminator_optimiser, device)
 
 
 def predict_patch(
