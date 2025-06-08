@@ -1,3 +1,7 @@
+SICGAN - Single Image Colourisation using a Generative Adversarial Network.
+
+Read SICGAN.pdf to understand the goals, results, and foundations of this project.
+
 This was written with python 3.10.
 
 To run this code there are a couple options. If you want to run the program locally, it will detect if there is a cuda compatible GPU (to run the cuda version of pytorch for GPU acceleration), otherwise it will run on the CPU (NOT RECOMMENDED THIS WILL MEAN YOU ARE SITTING THERE FOR A VERY VERY LONG TIME)
