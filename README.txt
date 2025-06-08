@@ -1,6 +1,6 @@
 SICGAN - Single Image Colourisation using a Generative Adversarial Network.
 
-Read SICGAN.pdf to understand the goals, results, and foundations of this project.
+Read SICGAN.pdf to understand the goals, results, and foundations of this project. This was a university project and I received a high distinction for my efforts, it should be noted though that due to imposed page limits for the submission the report is not as extensive as I would like and it does not clearly state that the training and test data sets ARE different. For training data, patches are randomly smapled and augmented, whereas for testing data, patches are linearly sampled along the image. This means that this deep learning task is a generative task and NOT a memorisation task.
 
 This was written with python 3.10.
 
