@@ -1,6 +1,6 @@
 SICGAN - Single Image Colourisation using a Generative Adversarial Network.
 
-Read SICGAN.pdf to understand the goals, results, and foundations of this project. This was a university project and I received a high distinction for my efforts, it should be noted though that due to imposed page limits for the submission the report is not as extensive as I would like and it does not clearly state that the training and test data sets ARE different. For training data, patches are randomly sampled and augmented, whereas for testing data, patches are linearly sampled along the image. This means that this deep learning task is a generative task and NOT a memorisation task.
+Read SICGAN.pdf to understand the goals, results, and foundations of this project. This was a university project, it should be noted though that due to imposed page limits for the submission the report is not as extensive as I would like and it does not clearly state that the training and test data sets ARE different. For training data, patches are randomly sampled and augmented, whereas for testing data, patches are linearly sampled along the image. This means that this deep learning task is a generative task and NOT a memorisation task.
 
 This was written with python 3.10.
 
@@ -13,3 +13,4 @@ NOTE that you can't have the normal version of torch, the cuda enabled version i
 The easier solution is just to connect to google colab and connect to a GPU there.
 
 Running the code is as simple as "python sicgan.py" ensuring that "jcsmr.jpg" is in the same directory as the program.
+
